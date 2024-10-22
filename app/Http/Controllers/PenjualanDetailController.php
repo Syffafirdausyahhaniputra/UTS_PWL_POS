@@ -74,21 +74,61 @@ class PenjualanDetailController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer',
-            'pembeli' => 'required|string',
-            'penjualan_kode' => 'required|string',
-            'penjualan_tanggal' => 'required|date',
-        ]);
+        // Start Transaction
+        DB::beginTransaction();
 
-        PenjualanModel::create([
-            'user_id' => $request->user_id,
-            'pembeli' => $request->pembeli,
-            'penjualan_kode' => $request->penjualan_kode,
-            'penjualan_tanggal' => $request->penjualan_tanggal,
-        ]);
+        try {
+            // Menyimpan penjualan
+            $penjualan = PenjualanModel::create([
+                'user_id' => $request->user_id,
+                'pembeli' => $request->pembeli,
+                'penjualan_kode' => $request->penjualan_kode,
+                'penjualan_tanggal' => $request->penjualan_tanggal,
+            ]);
 
-        return redirect('/penjualan')->with('success', 'Data penjualan berhasil disimpan');
+            // Menyimpan detail penjualan
+            foreach ($request->barang_id as $index => $barangId) {
+                $jumlahBarang = $request->jumlah[$index];
+                $hargaBarang = $request->harga[$index];
+
+                // Buat penjualan detail
+                PenjualanDetailModel::create([
+                    'penjualan_id' => $penjualan->penjualan_id,
+                    'barang_id' => $barangId,
+                    'jumlah' => $jumlahBarang,
+                    'harga' => $hargaBarang,
+                ]);
+
+                // Mengambil stok barang dari tabel t_stok
+                $stok = StokModel::where('barang_id', $barangId)->first();
+
+                if ($stok) {
+                    // Validasi apakah stok cukup
+                    if ($stok->stok_jumlah < $jumlahBarang) {
+                        // Jika stok tidak mencukupi, rollback transaksi dan return error
+                        DB::rollBack();
+                        return response()->json(['status' => false, 'message' => 'Stok barang tidak mencukupi!']);
+                    }
+
+                    // Kurangi stok barang
+                    $stok->stok_jumlah -= $jumlahBarang;
+                    $stok->save(); // Simpan perubahan stok
+                } else {
+                    // Jika stok tidak ditemukan, rollback transaksi dan return error
+                    DB::rollBack();
+                    return response()->json(['status' => false, 'message' => 'Stok barang tidak ditemukan!']);
+                }
+            }
+
+            // Commit Transaction
+            DB::commit();
+
+            return response()->json(['status' => true, 'message' => 'Penjualan berhasil ditambahkan']);
+        } catch (\Exception $e) {
+            // Rollback Transaction jika terjadi kesalahan
+            DB::rollBack();
+            return response()->json(['status' => false, 'message' => 'Terjadi kesalahan saat menambah penjualan: ' . $e->getMessage()]);
+        }
     }
 
     public function confirm_ajax(string $penjualan_id)
@@ -206,55 +246,60 @@ class PenjualanDetailController extends Controller
     }
     public function store_ajax(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|numeric',
-            'pembeli' => 'required|string|min:3|max:20',
-            'penjualan_kode' => 'required|string|min:3|max:100|unique:t_penjualan,penjualan_kode',
-            'penjualan_tanggal' => 'required|date',
-            'barang_id' => 'required|array',
-            'barang_id.*' => 'numeric',
-            'harga' => 'required|array',
-            'harga.*' => 'numeric',
-            'jumlah' => 'required|array',
-            'jumlah.*' => 'numeric',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'msgField' => $validator->errors()
-            ]);
-        }
+        // Start Transaction
+        DB::beginTransaction();
 
         try {
-            // Simpan data penjualan
-            $penjualan = new PenjualanModel();
-            $penjualan->user_id = $request->user_id;
-            $penjualan->pembeli = $request->pembeli;
-            $penjualan->penjualan_kode = $request->penjualan_kode;
-            $penjualan->penjualan_tanggal = $request->penjualan_tanggal;
-            $penjualan->save();
+            // Menyimpan penjualan
+            $penjualan = PenjualanModel::create([
+                'user_id' => $request->user_id,
+                'pembeli' => $request->pembeli,
+                'penjualan_kode' => $request->penjualan_kode,
+                'penjualan_tanggal' => $request->penjualan_tanggal,
+            ]);
 
-            // Simpan detail barang
+            // Menyimpan detail penjualan
             foreach ($request->barang_id as $index => $barangId) {
-                $detailPenjualan = new PenjualanDetailModel();
-                $detailPenjualan->penjualan_id = $penjualan->penjualan_id;
-                $detailPenjualan->barang_id = $barangId;
-                $detailPenjualan->harga = $request->harga[$index];
-                $detailPenjualan->jumlah = $request->jumlah[$index];
-                $detailPenjualan->save();
+                $jumlahBarang = $request->jumlah[$index];
+                $hargaBarang = $request->harga[$index];
+
+                // Buat penjualan detail
+                PenjualanDetailModel::create([
+                    'penjualan_id' => $penjualan->penjualan_id,
+                    'barang_id' => $barangId,
+                    'jumlah' => $jumlahBarang,
+                    'harga' => $hargaBarang,
+                ]);
+
+                // Mengambil stok barang dari tabel t_stok
+                $stok = StokModel::where('barang_id', $barangId)->first();
+
+                if ($stok) {
+                    // Validasi apakah stok cukup
+                    if ($stok->stok_jumlah < $jumlahBarang) {
+                        // Jika stok tidak mencukupi, rollback transaksi dan return error
+                        DB::rollBack();
+                        return response()->json(['status' => false, 'message' => 'Stok barang tidak mencukupi!']);
+                    }
+
+                    // Kurangi stok barang
+                    $stok->stok_jumlah -= $jumlahBarang;
+                    $stok->save(); // Simpan perubahan stok
+                } else {
+                    // Jika stok tidak ditemukan, rollback transaksi dan return error
+                    DB::rollBack();
+                    return response()->json(['status' => false, 'message' => 'Stok barang tidak ditemukan!']);
+                }
             }
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Data penjualan berhasil disimpan!'
-            ]);
+            // Commit Transaction
+            DB::commit();
+
+            return response()->json(['status' => true, 'message' => 'Penjualan berhasil ditambahkan']);
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Terjadi kesalahan, data gagal disimpan!',
-                'error' => $e->getMessage()
-            ]);
+            // Rollback Transaction jika terjadi kesalahan
+            DB::rollBack();
+            return response()->json(['status' => false, 'message' => 'Terjadi kesalahan saat menambah penjualan: ' . $e->getMessage()]);
         }
     }
 
@@ -506,5 +551,16 @@ class PenjualanDetailController extends Controller
         $pdf->render();
 
         return $pdf->stream('Data Penjualan ' . date('Y-m-d H:i:s') . '.pdf');
+    }
+
+    public function getStokBarang($barangId)
+    {
+        $stok = StokModel::where('barang_id', $barangId)->first();
+
+        if ($stok) {
+            return response()->json(['status' => true, 'stok_jumlah' => $stok->stok_jumlah]);
+        } else {
+            return response()->json(['status' => false, 'message' => 'Stok barang tidak ditemukan!']);
+        }
     }
 }

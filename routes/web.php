@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PenjualanDetailController;
 use App\Http\Controllers\ProfileController;
 use GuzzleHttp\Middleware;
@@ -27,6 +28,8 @@ use Monolog\Level;
 
 Route::pattern('id', '[0-9]+'); // Artinya: Ketika ada parameter {id}, maka harus berupa angka
 
+Route::get('/', [HomeController::class, 'index']);
+
 Route::get('login', [AuthController::class, 'login'])->name('login');
 Route::post('login', [AuthController::class, 'postlogin']);
 Route::get('logout', [AuthController::class, 'logout'])->middleware('auth');
@@ -36,7 +39,7 @@ Route::post('register', [AuthController::class, 'postRegister']);
 
 // Group route yang memerlukan autentikasi
 Route::middleware('auth')->group(function () {
-    Route::get('/', [WelcomeController::class, 'index']);
+    Route::get('/welcome', [WelcomeController::class, 'index']);
 
     Route::group(['prefix' => 'user', 'middleware' => 'authorize:ADM'], function () {
         Route::get('/', [UserController::class, 'index']);         // menampilkan halaman awal user
@@ -147,7 +150,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/export_pdf', [SupplierController::class, 'export_pdf']);
     });
 
-    Route::group(['prefix' => 'stok',  'middleware' => 'authorize:ADM'], function () {
+    Route::group(['prefix' => 'stok',  'middleware' => ['authorize:ADM,MNG,STF']], function () {
         Route::get('/', [StokController::class, 'index']);          // Menampilkan halaman awal stok
         Route::post('/list', [StokController::class, 'list']);      // Menampilkan data stok dalam bentuk JSON untuk DataTables
         Route::get('/create', [StokController::class, 'create']);   // Menampilkan halaman form tambah stok
@@ -169,13 +172,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/export_pdf', [StokController::class, 'export_pdf']); // export pdf
     });
 
-    Route::group(['prefix' => 'penjualan', 'middleware' => 'authorize:ADM'], function () {
+    Route::group(['prefix' => 'penjualan', 'middleware' => ['authorize:ADM,MNG,STF']], function () {
         Route::get('/', [PenjualanDetailController::class, 'index']);          // Menampilkan halaman awal penjualan
         Route::post('/list', [PenjualanDetailController::class, 'list']);      // Menampilkan data penjualan dalam bentuk JSON untuk DataTables
         Route::get('/create', [PenjualanDetailController::class, 'create']);   // Menampilkan halaman form tambah penjualan
         Route::post('/', [PenjualanDetailController::class, 'store']);         // Menyimpan data penjualan baru
         Route::get('/create_ajax', [PenjualanDetailController::class, 'create_ajax']); // Menampilkan halaman form tambah penjualan ajax
-        Route::get('/getHargaBarang/{id}', [PenjualanDetailController::class, 'getHargaBarang']);
+        Route::get('/getHargaBarang/{id}', [PenjualanDetailController::class, 'getHargaBarang']); 
+        Route::get('/getStokBarang/{barangId}', [PenjualanDetailController::class, 'getStokBarang']);
         Route::post('/ajax', [PenjualanDetailController::class, 'store_ajax']); // Menyimpan data penjualan baru ajax
         Route::put('/{id}/update_ajax', [PenjualanDetailController::class, 'update_ajax']); // Menyimpan perubahan data penjualan ajax
         Route::get('/{id}/delete_ajax', [PenjualanDetailController::class, 'confirm_ajax']); // Konfirmasi hapus data penjualan ajax
@@ -190,10 +194,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/export_pdf', [PenjualanDetailController::class, 'export_pdf']);     // Export data penjualan ke PDF
     });
 
-    Route::group(['prefix' => 'profile', 'middleware' => ['authorize:ADM,MNG,STF,CUS']], function () {
-        Route::get('/', [ProfileController::class, 'index']);
-        Route::post('/update_profile', [ProfileController::class, 'update_profile']);
-        Route::put('/update_pengguna/{id}', [ProfileController::class, 'update_pengguna']);
-        Route::put('/update_password/{id}', [ProfileController::class, 'update_password']);
+    Route::group(['prefix' => 'profile', 'middleware' => 'authorize:ADM,MNG,STF,CUS'], function () {
+        Route::get('/', [ProfileController::class, 'index'])->name('profile.index');
+        Route::patch('/{id}', [ProfileController::class, 'update'])->name('profile.update');
     });
 });

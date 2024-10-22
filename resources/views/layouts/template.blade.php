@@ -22,9 +22,62 @@
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="{{ asset('adminlte/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css') }}">
     <!-- Theme style -->
-    <link rel="stylesheet" href="{{ asset('adminlte/dist/css/adminlte.min.css') }}">
 
-    @stack('css') <!-- Digunakan untuk memanggil custom css dari perintah push('css') pada masing-masing view -->
+    <head>
+        <!-- Semua Link CSS yang sudah ada -->
+        <link rel="stylesheet" href="{{ asset('adminlte/dist/css/adminlte.min.css') }}">
+
+        @stack('css') <!-- Untuk custom CSS -->
+
+        <!-- Custom CSS untuk sidebar warna ungu -->
+        <style>
+            /* Background sidebar menjadi ungu */
+            .main-sidebar {
+                background-color: #6c5ce7;
+                /* Warna ungu untuk background */
+            }
+
+            /* Warna ungu untuk link menu aktif */
+            .nav-sidebar .nav-link.active {
+                background-color: #8a82ff !important;
+                /* Warna ungu terang untuk menu aktif */
+                color: #ffffff !important;
+                /* Teks putih untuk menu aktif */
+            }
+
+            /* Warna teks putih pada menu sidebar */
+            .nav-sidebar .nav-link {
+                color: #ffffff !important;
+                /* Warna teks putih untuk menu */
+            }
+
+            /* Warna hover ungu lebih terang untuk menu */
+            .nav-sidebar .nav-link:hover {
+                background-color: #a29bfe !important;
+                /* Warna ungu hover */
+                color: #ffffff !important;
+                /* Teks tetap putih saat hover */
+            }
+
+            /* Warna header teks di sidebar */
+            .nav-header {
+                color: #D1C4E9 !important;
+                /* Warna ungu terang untuk header teks */
+            }
+
+            /* Tombol logout dengan warna merah muda gelap */
+            .btn-danger {
+                background-color: #C2185B !important;
+                /* Warna merah muda gelap */
+            }
+
+            /* Untuk menghilangkan border biru pada saat fokus */
+            .nav-sidebar .nav-link:focus {
+                outline: none !important;
+                box-shadow: none !important;
+            }
+        </style>
+    </head>
 </head>
 
 <body class="hold-transition sidebar-mini">
@@ -37,10 +90,10 @@
         <!-- Main Sidebar Container -->
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
             <!-- Brand Logo -->
-            <a href="{{ url('/') }}" class="brand-link">
-                <img src="{{ asset('adminlte/dist/img/AdminLTELogo.png') }}" alt="AdminLTE Logo"
+            <a href="{{ url('/welcome') }}" class="brand-link">
+                <img src="{{ asset('img/logo.png') }}" alt="logo"
                     class="brand-image img-circle elevation-3" style="opacity: .8">
-                <span class="brand-text font-weight-light">PWL - Starter Code</span>
+                <span class="brand-text font-weight-bold">Akaneko Ramen</span>
             </a>
 
             <!-- Sidebar -->

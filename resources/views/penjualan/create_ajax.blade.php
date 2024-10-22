@@ -191,5 +191,39 @@
                 return false;
             }
         });
+
+        // Fetch stok barang ketika barang dipilih
+        $(document).on('change', '.select-barang', function() {
+            let barangId = $(this).val();
+            let row = $(this).closest('tr');
+
+            if (barangId) {
+                $.ajax({
+                    url: `/penjualan/getStokBarang/${barangId}`,
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.status) {
+                            // Menampilkan stok barang pada form
+                            row.find('.stok-barang').text('Stok tersedia: ' + response
+                                .stok_jumlah);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Gagal mengambil stok barang!'
+                        });
+                    }
+                });
+            }
+        });
+
     });
 </script>

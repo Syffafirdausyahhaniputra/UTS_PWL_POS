@@ -2,128 +2,97 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\UserModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
-use App\Models\UserModel;
-use App\Models\LevelModel;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
     public function index()
     {
+        $user = UserModel::findOrFail(Auth::id());
+
         $breadcrumb = (object) [
             'title' => 'Profil',
-            'list' => ['Home', 'Profile']
+            'list'  => ['Home', 'Profil']
         ];
 
-        $page = (object) [
-            'title' => 'Data Profil Pengguna'
-        ];
+        $activeMenu = 'profile';
 
-        $activeMenu = 'profile'; // Set the active menu
-
-        return view('profile.index', [
-            'breadcrumb' => $breadcrumb,
-            'page' => $page,
+        return view('profile.index', compact('user'), [
+            'breadcrumb' => $breadcrumb, 
             'activeMenu' => $activeMenu
         ]);
     }
 
-    public function update_profile(Request $request)
-    {
-        $request->validate([
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Validasi file gambar
-        ]);
-
-        // Mendapatkan ID pengguna yang sedang login
-        $userId = Auth::id();
-
-        // Mengambil pengguna berdasarkan ID menggunakan UserModel
-        $user = UserModel::find($userId);
-
-        // Jika ada file gambar yang diupload
-        if ($request->hasFile('avatar')) {
-            // Hapus foto profil lama jika ada
-            if ($user->avatar && Storage::exists('public/' . $user->avatar)) {
-                Storage::delete('public/' . $user->avatar);
-            }
-
-            // Simpan foto profil baru
-            $path = $request->file('avatar')->store('gambar', 'public');
-            $user->avatar = $path;
-        }
-
-        // Simpan perubahan ke database
-        $user->save();
-
-        return redirect()->back()->with('success', 'Foto profil berhasil diperbarui');
-    }
-
-    public function update_pengguna(Request $request, string $id)
+    public function update(Request $request, $id)
     {
         // Validasi input
         $request->validate([
-            'username' => 'required|string|min:3|unique:m_user,username,' . $id . ',user_id', // username harus unik
-            'nama' => 'required|string|max:100', // nama harus diisi dan maksimal 100 karakter
+            'username' => 'required|string|min:3|unique:m_user,username,' . $id . ',user_id',
+            'nama'     => 'required|string|max:100',
+            'old_password' => 'nullable|string',
+            'password' => 'nullable|min:5',
         ]);
 
-        // Mengambil pengguna berdasarkan ID
         $user = UserModel::find($id);
+
+        // Cek apakah ada perubahan pada data
+        $isChanged = false;
+
+        if ($user->username != $request->username || $user->nama != $request->nama) {
+            $isChanged = true;
+        }
+
+        if ($request->filled('old_password') && Hash::check($request->old_password, $user->password)) {
+            $isChanged = true;
+        }
+
+        // Jika ada file avatar yang diupload, anggap ada perubahan
+        if ($request->hasFile('avatar')) {
+            $isChanged = true;
+        }
+
+        // Jika tidak ada perubahan
+        if (!$isChanged) {
+            return redirect()->back()->with('info', 'Tidak ada perubahan pada profil Anda.');
+        }
 
         // Update data pengguna
         $user->username = $request->username;
         $user->nama = $request->nama;
 
-        // Simpan perubahan
-        $user->save();
-
-        return redirect()->back()->with('success', 'Data pengguna berhasil diperbarui');
-    }
-
-    public function update_password(Request $request, string $id)
-    {
-        // Custom validation rules
-        $validator = Validator::make($request->all(), [
-            'current_password' => 'required',
-            'new_password' => 'required|min:5', // Password minimal 5 karakter
-            'new_password_confirmation' => 'required|same:new_password', // Verifikasi password harus sama dengan password baru
-        ], [
-            'new_password.min' => 'Password minimal harus 5 karakter', // Pesan kesalahan kustom
-            'new_password_confirmation.same' => 'Verifikasi password yang anda masukkan tidak sesuai dengan password baru', // Pesan kesalahan kustom
-        ]);
-
-        // Jika validasi gagal
-        if ($validator->fails()) {
-            // Cek error untuk new_password dan new_password_confirmation
-            if ($validator->errors()->has('new_password')) {
-                return redirect()->back()
-                    ->withErrors($validator)
-                    ->with('error_type', 'new_password'); // Tetap di tab "Ubah Password"
-            }
-
-            if ($validator->errors()->has('new_password_confirmation')) {
-                return redirect()->back()
-                    ->withErrors($validator)
-                    ->with('error_type', 'new_password_confirmation'); // Tetap di tab "Ubah Password"
+        // Jika password lama benar dan password baru diisi, lakukan perubahan password
+        if ($request->filled('old_password')) {
+            if (Hash::check($request->old_password, $user->password)) {
+                $user->password = Hash::make($request->password);
+            } else {
+                return back()
+                    ->withErrors(['old_password' => 'Password lama salah'])
+                    ->withInput();
             }
         }
 
-        // Ambil user berdasarkan ID
-        $user = UserModel::find($id);
+        // Handle upload avatar baru
+        if ($request->hasFile('avatar')) {
+            // Hapus avatar lama jika ada
+            if ($user->avatar && file_exists(storage_path('app/public/photos/' . $user->avatar))) {
+                Storage::delete('public/photos/' . $user->avatar);
+            }
 
-        // Cek apakah password lama cocok
-        if (!Hash::check($request->current_password, $user->password)) {
-            return redirect()->back()->withErrors(['current_password' => 'Password lama tidak sesuai'])
-                ->with('error_type', 'current_password'); // Tetap di tab "Ubah Password"
+            // Simpan avatar baru
+            $file = $request->file('avatar');
+            $fileName = $file->hashName();
+            $file->storeAs('public/photos', $fileName);
+            $user->avatar = $fileName;
         }
 
-        // Jika validasi lolos, ubah password user
-        $user->password = Hash::make($request->new_password);
+        // Simpan perubahan pada user
         $user->save();
 
-        return redirect()->back()->with('success', 'Password berhasil diubah');
+        // Redirect dengan pesan sukses
+        return redirect()->back()->with('success', 'Profile berhasil diperbarui!');
     }
 }

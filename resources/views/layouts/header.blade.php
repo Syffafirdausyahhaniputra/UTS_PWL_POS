@@ -37,7 +37,7 @@
         <li class="nav-item">
             <a href="{{ url('/profile') }}" class="nav-link {{ $activeMenu == 'profile' ? 'active' : '' }}">
                 <!-- Display user's avatar -->
-                <img src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('user.png') }}"
+                <img src="{{ Auth::user()->avatar ? asset('storage/photos/' . Auth::user()->avatar) : asset('img/user.jpg') }}"
                     class="rounded-circle" width="30" height="30" alt="User Avatar">
                 <!-- Display user's name -->
                 {{ Auth::user()->nama }} <span class="caret"></span>

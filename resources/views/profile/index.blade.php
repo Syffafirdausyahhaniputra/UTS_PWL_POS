@@ -6,182 +6,158 @@
         <div class="col-md-8">
             <div class="card card-outline card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">{{ $page->title }}</h3>
+                    <h3 class="card-title">{{ __('Profile') }}</h3>
                 </div>
 
                 <div class="card-body">
-                    <!-- Profile Picture Section -->
-                    <div class="text-center mb-4">
-                        <img id="profile-pic" src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('user.jpg') }}" class="rounded-circle" width="200" height="200" alt="Profile Picture">
-                        <div class="mt-2 mb-5">
-                            <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#editProfileModal">
-                                <i class="fas fa-edit"></i> Ganti Foto
-                            </button>
-                        </div>
-                    </div>
+                    <form method="POST" action="{{ route('profile.update', $user->user_id) }}" enctype="multipart/form-data">
+                        @method('PATCH')
+                        @csrf
 
-                    <!-- Tab Navigation -->
-                    <ul class="nav nav-menu_profil mb-0" id="profileTab" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link {{ session('error_type') ? '' : 'active' }}" id="data-tab" data-toggle="tab" href="#data-pengguna" role="tab" aria-controls="data-pengguna" aria-selected="true">Data Pengguna</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ session('error_type') ? 'active' : '' }}" id="password-tab" data-toggle="tab" href="#ubah-password" role="tab" aria-controls="ubah-password" aria-selected="false">Ubah Password</a>
-                        </li>
-                    </ul>
+                        <div class="row">
+                            <!-- Gambar Profil di sebelah kiri -->
+                            <div class="col-md-4 d-flex flex-column align-items-center justify-content-center">
+                                <!-- Gambar Profil -->
+                                <img id="profile-pic" src="{{ $user->avatar ? asset('storage/photos/' . $user->avatar) : asset('storage/photos/user.jpg') }}" class="rounded-circle mb-3" width="220" height="220" alt="Profile Picture">
 
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="profileTabContent">
-                        <!-- Data Pengguna -->
-                        <div class="tab-pane fade {{ session('error_type') ? '' : 'show active' }}" id="data-pengguna" role="tabpanel" aria-labelledby="data-tab">
-                            <div class="container border-container">
-                                <form id="profile-form" method="POST" action="{{ url('profile/update_pengguna', Auth::user()->user_id) }}">
-                                    @csrf
-                                    @method('PUT')
-                                    <div class="form-group mt-4">
-                                        <label for="username">Username</label>
-                                        <input type="text" class="form-control" id="username" name="username" value="{{ Auth::user()->username }}" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="nama">Nama</label>
-                                        <input type="text" class="form-control" id="nama" name="nama" value="{{ Auth::user()->nama }}" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="level_nama">Level Pengguna</label>
-                                        <input type="text" class="form-control" id="level_nama" value="{{ Auth::user()->level->level_nama }}" disabled>
-                                    </div>
-                                    <div class="form-group text-right mt-4">
-                                        <button type="submit" class="btn btn-primary">Simpan</button>
-                                    </div>
-                                </form>
+                                <!-- Button Ganti Foto -->
+                                <div class="mt-2">
+                                    <label for="avatar" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i> Ganti Foto
+                                    </label>
+                                    <input type="file" id="avatar" name="avatar" class="d-none" onchange="previewImage(event)">
+                                </div>
+
+                                <!-- Tempat Menampilkan Nama File yang Dipilih -->
+                                <small id="file-name" class="text-muted mt-2"></small>
+
+                                <small id="error-avatar" class="error-text text-danger"></small>
+                            </div>
+
+                            <!-- Form fields di sebelah kanan -->
+                            <div class="col-md-8">
+                                <!-- Username -->
+                                <div class="form-group mt-3">
+                                    <label for="username">{{ __('Username') }}</label>
+                                    <input id="username" type="text" class="form-control @error('username') is-invalid @enderror" name="username" value="{{ $user->username }}" required autocomplete="username">
+                                    @error('username')
+                                        <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+
+                                <!-- Nama -->
+                                <div class="form-group mt-3">
+                                    <label for="nama">{{ __('Nama') }}</label>
+                                    <input id="nama" type="text" class="form-control @error('nama') is-invalid @enderror" name="nama" value="{{ old('nama', $user->nama) }}" required autocomplete="nama">
+                                    @error('nama')
+                                        <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+
+                                <!-- Password Lama -->
+                                <div class="form-group mt-3">
+                                    <label for="old_password">{{ __('Password Lama') }}</label>
+                                    <input id="old_password" type="password" class="form-control @error('old_password') is-invalid @enderror" name="old_password" autocomplete="old-password">
+                                    @error('old_password')
+                                        <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+
+                                <!-- Password Baru -->
+                                <div class="form-group mt-3">
+                                    <label for="password">{{ __('Password Baru') }}</label>
+                                    <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" autocomplete="new-password">
+                                    @error('password')
+                                        <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+
+                                <!-- Confirm Password -->
+                                <div class="form-group mt-3">
+                                    <label for="password-confirm">{{ __('Confirm Password') }}</label>
+                                    <input id="password-confirm" type="password" class="form-control" name="password_confirmation" autocomplete="new-password">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Ubah Password -->
-                        <div class="tab-pane fade {{ session('error_type') ? 'show active' : '' }}" id="ubah-password" role="tabpanel" aria-labelledby="password-tab">
-                            <div class="container border-container">
-                                <form id="password-form" method="POST" action="{{ url('profile/update_password', Auth::user()->user_id) }}">
-                                    @csrf
-                                    @method('PUT')
-                                    <div class="form-group mt-4">
-                                        <label for="current_password">Password Lama</label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control" id="current_password" name="current_password" required>
-                                            <div class="input-group-append">
-                                                <span class="input-group-text toggle-password" toggle="#current_password">
-                                                    <i class="fas fa-eye"></i>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <small id="error-current_password" class="error-text form-text text-danger">
-                                            @error('current_password') {{ $message }} @enderror
-                                        </small>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="new_password">Password Baru</label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control" id="new_password" name="new_password" required>
-                                            <div class="input-group-append">
-                                                <span class="input-group-text toggle-password" toggle="#new_password">
-                                                    <i class="fas fa-eye"></i>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <small id="error-new_password" class="error-text form-text text-danger">
-                                            @error('new_password') {{ $message }} @enderror
-                                        </small>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="confirm_password">Verifikasi Password</label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control" id="confirm_password" name="new_password_confirmation" required>
-                                            <div class="input-group-append">
-                                                <span class="input-group-text toggle-password" toggle="#confirm_password">
-                                                    <i class="fas fa-eye"></i>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <small id="error-confirm_password" class="error-text form-text text-danger">
-                                            @error('new_password_confirmation') {{ $message }} @enderror
-                                        </small>
-                                    </div>
-
-                                    <div class="form-group text-right mt-4">
-                                        <button type="submit" class="btn btn-primary">Ubah Password</button>
-                                    </div>
-                                </form>
-                            </div>
+                        <!-- Tombol Simpan -->
+                        <div class="form-group text-right mt-4">
+                            <button type="submit" class="btn btn-primary">{{ __('Update Profile') }}</button>
                         </div>
-                    </div>
-
-                    <!-- Modal for changing profile picture -->
-                    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-body">
-                                @include('profile.edit_profile')
-                            </div>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-    $(document).ready(function() {
-        $('.toggle-password').click(function() {
-            let input = $($(this).attr("toggle"));
-            if (input.attr("type") === "password") {
-                input.attr("type", "text");
-            } else {
-                input.attr("type", "password");
-            }
+    // Jika profile berhasil diperbarui, tampilkan notifikasi sukses
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: '{{ session('success') }}',
+            confirmButtonText: 'OK'
         });
+    @endif
 
-        @if(session('success'))
-            alert('{{ session('success') }}');
-        @endif
+    // Jika tidak ada perubahan pada profile, tampilkan notifikasi info
+    @if(session('info'))
+        Swal.fire({
+            icon: 'info',
+            title: 'Tidak ada perubahan',
+            text: '{{ session('info') }}',
+            confirmButtonText: 'OK'
+        });
+    @endif
 
-        @if(session('error_type') === 'current_password')
-            alert('Password lama tidak sesuai');
-        @endif
+    // Preview gambar dan tampilkan nama file
+    function previewImage(event) {
+        var fileInput = event.target;
+        var file = fileInput.files[0];
+        var error = document.getElementById('error-avatar');
+        var allowedExtensions = /(\.jpg|\.jpeg|\.png|\.gif)$/i;
+        var maxSize = 5 * 1024 * 1024; // 5 MB
 
-        @if(session('error_type') === 'new_password' || session('error_type') === 'new_password_confirmation')
-            $('#password-tab').tab('show'); // Aktifkan tab "Ubah Password"
-        @endif
-    });
+        error.textContent = '';
+
+        if (file) {
+            var fileNameElement = document.getElementById('file-name');
+            fileNameElement.textContent = 'File: ' + file.name;
+
+            if (!allowedExtensions.exec(file.name)) {
+                error.textContent = 'Format gambar harus berupa jpeg, png, jpg, atau gif';
+                fileInput.value = '';
+                fileNameElement.textContent = ''; // Kosongkan nama file jika ada error
+                return false;
+            }
+
+            if (file.size > maxSize) {
+                error.textContent = 'Gambar maksimal 5 MB';
+                fileInput.value = '';
+                fileNameElement.textContent = ''; // Kosongkan nama file jika ada error
+                return false;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var output = document.getElementById('profile-pic');
+                output.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
 </script>
-
-
-<!-- CSS Styling -->
-<style>
-    .border-container {
-        border: 1px solid black;
-        border-radius: 0 10px 10px 10px;
-        padding: 20px;
-    }
-
-    .nav-menu_profil .nav-link {
-        border-radius: 10px 10px 0 0;
-        border: 1px solid grey;
-        color: black;
-        background-color: white;
-    }
-
-    .nav-menu_profil .nav-link.active {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-
-    .form-group input {
-        border: 1px solid #ccc;
-        padding: 10px;
-        border-radius: 5px;
-    }
-</style>
-    
 @endsection
